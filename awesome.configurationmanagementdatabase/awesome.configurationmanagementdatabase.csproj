@@ -6,12 +6,12 @@
     <Company>NA</Company>
     <Description>simple library to get details about servers from various cloud providers in to a MySQL database</Description>
     <PackageProjectUrl>https://github.com/SleepyFoxStudio/awesome.configurationmanagementdatabase</PackageProjectUrl>
-    <RepositoryUrl>https://bitbucket.org/spiderbike/awesome.configurationmanagementdatabase/src/master/</RepositoryUrl>
+    <RepositoryUrl>https://github.com/SleepyFoxStudio/awesome.configurationmanagementdatabase</RepositoryUrl>
     <PackageTags>Cloud,MySQL,server</PackageTags>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <AssemblyVersion>1.0.113</AssemblyVersion>
-    <FileVersion>1.0.113</FileVersion>
-    <Version>1.0.113</Version>
+    <AssemblyVersion>1.0.114</AssemblyVersion>
+    <FileVersion>1.0.114</FileVersion>
+    <Version>1.0.114</Version>
   </PropertyGroup>
 
   <ItemGroup>

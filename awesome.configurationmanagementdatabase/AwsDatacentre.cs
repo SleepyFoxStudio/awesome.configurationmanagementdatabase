@@ -366,10 +366,17 @@ namespace awesome.configurationmanagementdatabase
                 var regionVolumes = await GetAllVolumesAsync(region);
                 foreach (var regionVolume in regionVolumes)
                 {
+                    string volumeName = null;
+                    if (regionVolume.Tags != null)
+                    {
+                        volumeName = regionVolume.Tags
+                            .FirstOrDefault(s => s.Key.Equals("name", StringComparison.InvariantCultureIgnoreCase))
+                            ?.Value;
+                    }
                     volumes.Add(new CloudVolume
                     {
                         Id = regionVolume.VolumeId,
-                        Name = regionVolume.Tags.FirstOrDefault(s => s.Key.Equals("name", StringComparison.InvariantCultureIgnoreCase))?.Value,
+                        Name = volumeName,
                         Type = regionVolume.VolumeType,
                         Encrypted = regionVolume.Encrypted,
                         AccountId = account,
@@ -1059,10 +1066,14 @@ namespace awesome.configurationmanagementdatabase
             {
                 var volDetails = allVolumes.Single(v => v.VolumeId == volume.Ebs.VolumeId);
                 var tags = new Dictionary<string, string>();
-                foreach (var tag in volDetails.Tags)
+                if (volDetails.Tags != null)
                 {
-                    tags.Add(tag.Key, tag.Value);
+                    foreach (var tag in volDetails.Tags)
+                    {
+                        tags.Add(tag.Key, tag.Value);
+                    }
                 }
+
                 volumes.Add(new VolumeDetail
                 {
                     Id = volume.Ebs.VolumeId,
