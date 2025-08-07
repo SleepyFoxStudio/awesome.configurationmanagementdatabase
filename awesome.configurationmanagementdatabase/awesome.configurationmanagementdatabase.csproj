@@ -9,9 +9,9 @@
     <RepositoryUrl>https://bitbucket.org/spiderbike/awesome.configurationmanagementdatabase/src/master/</RepositoryUrl>
     <PackageTags>Cloud,MySQL,server</PackageTags>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <AssemblyVersion>1.0.112</AssemblyVersion>
-    <FileVersion>1.0.112</FileVersion>
-    <Version>1.0.112</Version>
+    <AssemblyVersion>1.0.113</AssemblyVersion>
+    <FileVersion>1.0.113</FileVersion>
+    <Version>1.0.113</Version>
   </PropertyGroup>
 
   <ItemGroup>
