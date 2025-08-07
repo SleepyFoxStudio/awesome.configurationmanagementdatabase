@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2012/06/nuspec.xsd">
+  <metadata>
+    <id>awesome.configurationmanagementdatabase</id>
+    <version>1.0.10</version>
+    <authors>Mark Richardson</authors>
+    <owners>Mark Richardson</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <license type="expression">Apache-2.0</license>
+    <projectUrl>https://bitbucket.org/spiderbike/awesome.configurationmanagementdatabase</projectUrl>
+    <description>simple library to get details about servers from various cloud providers in to a MySQL database</description>
+    <tags>Cloud,MySQL,server</tags>
+    <repository url="https://bitbucket.org/spiderbike/awesome.configurationmanagementdatabase/src/master/" />
+	</metadata>
+</package>
