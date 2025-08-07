@@ -5,7 +5,7 @@
     <Authors>Mark Richardson</Authors>
     <Company>NA</Company>
     <Description>simple library to get details about servers from various cloud providers in to a MySQL database</Description>
-    <PackageProjectUrl>https://bitbucket.org/spiderbike/awesome.configurationmanagementdatabase</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/SleepyFoxStudio/awesome.configurationmanagementdatabase</PackageProjectUrl>
     <RepositoryUrl>https://bitbucket.org/spiderbike/awesome.configurationmanagementdatabase/src/master/</RepositoryUrl>
     <PackageTags>Cloud,MySQL,server</PackageTags>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
