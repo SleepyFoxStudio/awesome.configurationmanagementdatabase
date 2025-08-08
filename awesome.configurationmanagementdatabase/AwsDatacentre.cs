@@ -820,7 +820,7 @@ namespace awesome.configurationmanagementdatabase
                                         new Dimension
                                         {
                                             Name = "DBInstanceIdentifier",
-                                            Value = "atlassianproddb"
+                                            Value = instanceDbiResourceId
                                         }
                                     }
                                 },
