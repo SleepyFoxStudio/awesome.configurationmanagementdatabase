@@ -775,7 +775,7 @@ namespace awesome.configurationmanagementdatabase
                             Tags = metadata,
                             MaxAllocatedStorage = instance.MaxAllocatedStorage,
                             AllocatedStorage = instance.AllocatedStorage,
-                            FreeStorageSpace = await GetDbFreeStorage(cloudwatchClient, instance.DbiResourceId)
+                            FreeStorageSpace = await GetDbFreeStorage(cloudwatchClient, instance.DBInstanceIdentifier)
                         });
 
                         itemRegionCount++;
@@ -796,7 +796,7 @@ namespace awesome.configurationmanagementdatabase
         }
 
 
-        public static async Task<double?> GetDbFreeStorage(AmazonCloudWatchClient cloudwatchClient, string instanceDbiResourceId)
+        public static async Task<double?> GetDbFreeStorage(AmazonCloudWatchClient cloudwatchClient, string dBInstanceIdentifier)
         {
 
             var request = new GetMetricDataRequest
@@ -820,7 +820,7 @@ namespace awesome.configurationmanagementdatabase
                                         new Dimension
                                         {
                                             Name = "DBInstanceIdentifier",
-                                            Value = instanceDbiResourceId
+                                            Value = dBInstanceIdentifier
                                         }
                                     }
                                 },
