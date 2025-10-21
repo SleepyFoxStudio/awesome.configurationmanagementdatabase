@@ -39,6 +39,7 @@ using ConsoleDump;
 using Task = System.Threading.Tasks.Task;
 using Volume = Amazon.EC2.Model.Volume;
 using Org.BouncyCastle.Utilities;
+using System.Data.Common;
 
 
 namespace awesome.configurationmanagementdatabase
@@ -71,30 +72,62 @@ namespace awesome.configurationmanagementdatabase
 
         public async Task<Account> GetAccountAsync()
         {
+            var regionsToCheckCreds = new List<string>
+            {
+                "eu-west-1",
+                "cn-north-1"
+            };
+            string apiRegion = null;
+            foreach (var checkingRegion in regionsToCheckCreds)
+            {
+                try
+                {
+                    var stsClientRegionCheck = new AmazonSecurityTokenServiceClient(_awsCreds, RegionEndpoint.GetBySystemName(checkingRegion));
+                    var getCallerIdentityResponseRegionCheck = await stsClientRegionCheck.GetCallerIdentityAsync(new GetCallerIdentityRequest());
+                    apiRegion = checkingRegion;
+                    Console.WriteLine($"Passed Checking creds in {checkingRegion}");
+                    break;
+                }
+                catch (Exception exception)
+                {
+                   Console.WriteLine($"Failed Checking creds in {checkingRegion}, {exception.Message}");
+                }
+            }
 
-            var client = new AmazonEC2Client(_awsCreds, RegionEndpoint.EUWest1);
-            var orgClient = new AmazonOrganizationsClient(_awsOrgCreds, RegionEndpoint.EUWest1);
+            if (apiRegion == null)
+            {
+                throw new Exception("Failed to check caller identity");
+            }
+           
+            var baseRegion = RegionEndpoint.GetBySystemName(apiRegion);
+            var client = new AmazonEC2Client(_awsCreds, baseRegion);
+            var orgClient = new AmazonOrganizationsClient(_awsOrgCreds, baseRegion);
             var account = new Account();
 
             var regionRequest = new DescribeRegionsRequest();
-            var regionresponse = await client.DescribeRegionsAsync(regionRequest, CancellationToken.None);
-
-
-            var stsClient = new AmazonSecurityTokenServiceClient(_awsCreds, RegionEndpoint.EUWest1);
+            var regionsResponse = await client.DescribeRegionsAsync(regionRequest, CancellationToken.None);
+           
+            var stsClient = new AmazonSecurityTokenServiceClient(_awsCreds, baseRegion);
             var getCallerIdentityResponse = await stsClient.GetCallerIdentityAsync(new GetCallerIdentityRequest());
 
 
-            var iamClient = new AmazonIdentityManagementServiceClient(_awsCreds, RegionEndpoint.EUWest1);
+
+            var iamClient = new AmazonIdentityManagementServiceClient(_awsCreds, baseRegion);
             var accountAliases = await iamClient.ListAccountAliasesAsync(new ListAccountAliasesRequest());
 
 
-            var accountName = accountAliases.AccountAliases.SingleOrDefault();
+            var accountName = "";
+
+            if (accountAliases.AccountAliases != null)
+            {
+                accountName = accountAliases.AccountAliases.SingleOrDefault();
+            }
             if (string.IsNullOrEmpty(accountName))
             {
                 accountName = getCallerIdentityResponse.Account;
             }
 
-            if (!accountName.EndsWith($"-{getCallerIdentityResponse.Account}"))
+            if (!accountName.EndsWith(getCallerIdentityResponse.Account))
             {
                 accountName = accountName + "-" + getCallerIdentityResponse.Account;
             }
@@ -104,21 +137,21 @@ namespace awesome.configurationmanagementdatabase
                 AccountId = getCallerIdentityResponse.Account,
                 DataCentreType = "Aws",
                 ServerGroups = new List<ServerGroup>(),
-                EcsContainerInstances = await GetEcsContainerInstancesAsync(regionresponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
-                Users = await GetUsers(getCallerIdentityResponse.Account).ConfigureAwait(false),
-                Databases = await GetDatabasesAsync(regionresponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
-                ApiGatewayRestApis = await GetApiGatewayRestApisAsync(regionresponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
-                ApiGatewayV2Apis = await GetApiGatewayV2ApisAsync(regionresponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
-                LambdaFunctions = await GetLambdaFunctionsAsync(regionresponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
-                DynamoDatabases = await GetDynamoDatabasesAsync(regionresponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
+                EcsContainerInstances = await GetEcsContainerInstancesAsync(regionsResponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
+                Users = await GetUsers(getCallerIdentityResponse.Account, baseRegion).ConfigureAwait(false),
+                Databases = await GetDatabasesAsync(regionsResponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
+                ApiGatewayRestApis = await GetApiGatewayRestApisAsync(regionsResponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
+                ApiGatewayV2Apis = await GetApiGatewayV2ApisAsync(regionsResponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
+                LambdaFunctions = await GetLambdaFunctionsAsync(regionsResponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
+                DynamoDatabases = await GetDynamoDatabasesAsync(regionsResponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
                 Tags = await GetTagsForAccount(getCallerIdentityResponse.Account, orgClient),
-                Volumes = await GetCloudVolumes(regionresponse.Regions, getCallerIdentityResponse.Account),
+                Volumes = await GetCloudVolumes(regionsResponse.Regions, getCallerIdentityResponse.Account),
             });
 
 
 
 
-            foreach (var region in regionresponse.Regions)
+            foreach (var region in regionsResponse.Regions)
             {
                 var servers = new List<ServerDetails>();
                 string nextToken = null;
@@ -317,8 +350,12 @@ namespace awesome.configurationmanagementdatabase
 
 
             var allInstanceTypes = account.ServerGroups.SelectMany(a => a.Servers).Select(s => s.Flavour).Distinct();
-
-            var priceListClient = new AmazonPricingClient(_awsCreds, RegionEndpoint.USEast1);
+            var pricingEndpoint = RegionEndpoint.USEast1;
+            if (baseRegion.PartitionName.Equals("aws-cn", StringComparison.InvariantCultureIgnoreCase))
+            {
+                pricingEndpoint = RegionEndpoint.CNNorthWest1;
+            }
+            var priceListClient = new AmazonPricingClient(_awsCreds, pricingEndpoint);
             var getInstanceTypeTasks = allInstanceTypes.Select(t => priceListClient.GetProductsAsync(new GetProductsRequest
             {
                 ServiceCode = "AmazonEC2",
@@ -335,8 +372,16 @@ namespace awesome.configurationmanagementdatabase
                 // and we only want memory and vCPUs, which are the same for all options.
                 MaxResults = 1
             }));
-
-            var instanceTypeResponses = await Task.WhenAll(getInstanceTypeTasks).ConfigureAwait(false);
+            List<GetProductsResponse> instanceTypeResponses = new List<GetProductsResponse>();
+            try
+            {
+                var results = await Task.WhenAll(getInstanceTypeTasks);
+                instanceTypeResponses = results.ToList();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
 
             var instanceTypeLookup = instanceTypeResponses
                 .Select(r => JObject.Parse(r.PriceList[0])["product"]["attributes"])
@@ -850,13 +895,13 @@ namespace awesome.configurationmanagementdatabase
             return null;
         }
 
-        private async Task<List<CloudUser>> GetUsers(string accountId)
+        private async Task<List<CloudUser>> GetUsers(string accountId, RegionEndpoint baseRegion)
         {
             var users = new List<CloudUser>();
 
             try
             {
-                var iamClient = new AmazonIdentityManagementServiceClient(_awsCreds, RegionEndpoint.EUWest1);
+                var iamClient = new AmazonIdentityManagementServiceClient(_awsCreds, baseRegion);
                 var listUsersRequest = new ListUsersRequest
                 {
                     MaxItems = 100
@@ -888,9 +933,9 @@ namespace awesome.configurationmanagementdatabase
                                 UserName = user.UserName
                             });
                         }
-                        catch (Exception e)
+                        catch (AmazonIdentityManagementServiceException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
                         {
-                            Console.WriteLine($"no login profile for {user.UserName}");
+                            //Console.WriteLine($"no login profile for {user.UserName}");
                         }
 
                         users.Add(new CloudUser
@@ -1088,7 +1133,6 @@ namespace awesome.configurationmanagementdatabase
 
             return volumes;
         }
-
 
 
     }
