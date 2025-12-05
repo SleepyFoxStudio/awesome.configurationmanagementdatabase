@@ -268,7 +268,7 @@ namespace awesome.configurationmanagementdatabase
                             {
                                 platformName = ssmInfo.PlatformName;
                                 platformVersion = ssmInfo.PlatformVersion;
-                                platformType = ssmInfo.PlatformType.Value;
+                                platformType = ssmInfo.PlatformType?.Value;
                                 platformLookupMethod = "SSM";
                             }
                             //else
