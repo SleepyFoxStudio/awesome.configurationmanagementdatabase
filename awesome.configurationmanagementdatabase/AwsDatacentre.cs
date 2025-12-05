@@ -1,16 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using Amazon;
+﻿using Amazon;
+using Amazon.APIGateway;
+using Amazon.APIGateway.Model;
+using Amazon.ApiGatewayV2;
+using Amazon.ApiGatewayV2.Model;
+using Amazon.CloudWatch;
+using Amazon.CloudWatch.Model;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.Model;
 using Amazon.EC2;
 using Amazon.EC2.Model;
+using Amazon.ECS;
+using Amazon.ECS.Model;
 using Amazon.IdentityManagement;
 using Amazon.IdentityManagement.Model;
+using Amazon.Lambda;
+using Amazon.Lambda.Model;
 using Amazon.Organizations;
 using Amazon.Pricing;
 using Amazon.Pricing.Model;
@@ -19,27 +23,25 @@ using Amazon.RDS.Model;
 using Amazon.Runtime;
 using Amazon.SecurityToken;
 using Amazon.SecurityToken.Model;
-using Newtonsoft.Json.Linq;
-using Filter = Amazon.Pricing.Model.Filter;
-using Amazon.APIGateway;
-using Amazon.APIGateway.Model;
-using Amazon.ApiGatewayV2;
-using Amazon.ApiGatewayV2.Model;
-using Amazon.CloudWatch;
-using Amazon.CloudWatch.Model;
-using Amazon.Lambda;
-using Amazon.Lambda.Model;
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.Model;
-using Amazon.ECS;
-using Amazon.ECS.Model;
 using Amazon.SimpleSystemsManagement;
 using Amazon.SimpleSystemsManagement.Model;
 using ConsoleDump;
+using Newtonsoft.Json.Linq;
+using Org.BouncyCastle.Utilities;
+using Polly;
+using Polly.Retry;
+using System;
+using System.Collections.Generic;
+using System.Data.Common;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using Filter = Amazon.Pricing.Model.Filter;
 using Task = System.Threading.Tasks.Task;
 using Volume = Amazon.EC2.Model.Volume;
-using Org.BouncyCastle.Utilities;
-using System.Data.Common;
 
 
 namespace awesome.configurationmanagementdatabase
@@ -49,6 +51,15 @@ namespace awesome.configurationmanagementdatabase
         private readonly AWSCredentials _awsCreds;
         private readonly AWSCredentials _awsOrgCreds;
         private readonly string _cloudType = "AWS";
+        private AsyncRetryPolicy _retryIfException = Policy
+    .Handle<Amazon.Organizations.Model.TooManyRequestsException>()
+    .Or<System.IO.IOException>()
+    .Or<Amazon.Runtime.Internal.HttpErrorResponseException>()
+    .WaitAndRetryAsync(10, i => TimeSpan.FromSeconds(5), onRetry: (exception, sleepDuration, attemptNumber, context) =>
+    {
+        Console.WriteLine($"Transient error. Retrying in {sleepDuration}. {attemptNumber}");
+    });
+
 
         public AwsDatacentre(string accessKeyId, string secretKey, string sessionToken = null, string orgAccessKeyId = null, string orgSecretKey = null)
         {
@@ -444,11 +455,16 @@ namespace awesome.configurationmanagementdatabase
             };
             try
             {
-                var accountDetails = await client.ListTagsForResourceAsync(request);
+                var accountDetails = new Amazon.Organizations.Model.ListTagsForResourceResponse();
+                await _retryIfException.ExecuteAsync(async () =>
+                {
+                    accountDetails = await client.ListTagsForResourceAsync(request);
+                });
                 foreach (var tag in accountDetails.Tags)
                 {
                     output.Add(tag.Key, tag.Value);
                 }
+                Console.WriteLine($"Successfully got tags for account {accountId}");
             }
             catch (Exception e)
             {

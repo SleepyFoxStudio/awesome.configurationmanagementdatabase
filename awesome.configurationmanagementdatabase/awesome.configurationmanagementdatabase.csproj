@@ -9,9 +9,9 @@
     <RepositoryUrl>https://github.com/SleepyFoxStudio/awesome.configurationmanagementdatabase</RepositoryUrl>
     <PackageTags>Cloud,MySQL,server</PackageTags>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
-    <AssemblyVersion>1.0.119</AssemblyVersion>
-    <FileVersion>1.0.119</FileVersion>
-    <Version>1.0.119</Version>
+    <AssemblyVersion>1.0.120</AssemblyVersion>
+    <FileVersion>1.0.120</FileVersion>
+    <Version>1.0.120</Version>
   </PropertyGroup>
 
   <ItemGroup>
