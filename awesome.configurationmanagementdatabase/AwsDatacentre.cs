@@ -101,7 +101,7 @@ namespace awesome.configurationmanagementdatabase
                 }
                 catch (Exception exception)
                 {
-                   Console.WriteLine($"Failed Checking creds in {checkingRegion}, {exception.Message}");
+                    Console.WriteLine($"Failed Checking creds in {checkingRegion}, {exception.Message}");
                 }
             }
 
@@ -109,7 +109,7 @@ namespace awesome.configurationmanagementdatabase
             {
                 throw new Exception("Failed to check caller identity");
             }
-           
+
             var baseRegion = RegionEndpoint.GetBySystemName(apiRegion);
             var client = new AmazonEC2Client(_awsCreds, baseRegion);
             var orgClient = new AmazonOrganizationsClient(_awsOrgCreds, baseRegion);
@@ -117,7 +117,7 @@ namespace awesome.configurationmanagementdatabase
 
             var regionRequest = new DescribeRegionsRequest();
             var regionsResponse = await client.DescribeRegionsAsync(regionRequest, CancellationToken.None);
-           
+
             var stsClient = new AmazonSecurityTokenServiceClient(_awsCreds, baseRegion);
             var getCallerIdentityResponse = await stsClient.GetCallerIdentityAsync(new GetCallerIdentityRequest());
 
@@ -159,11 +159,20 @@ namespace awesome.configurationmanagementdatabase
                 Volumes = await GetCloudVolumes(regionsResponse.Regions, getCallerIdentityResponse.Account),
             });
 
-
-
-
             foreach (var region in regionsResponse.Regions)
             {
+
+
+                var regionedClient = new AmazonEC2Client(_awsCreds, RegionEndpoint.GetBySystemName(region.RegionName));
+
+                var azLookupResponse = await regionedClient.DescribeAvailabilityZonesAsync(
+                    new DescribeAvailabilityZonesRequest
+                    {
+                        AllAvailabilityZones = true
+                    });
+
+
+
                 var servers = new List<ServerDetails>();
                 string nextToken = null;
                 while (true)
@@ -304,6 +313,22 @@ namespace awesome.configurationmanagementdatabase
                             //    }
                             //}
 
+                            var azLongName = "";
+                            var azGroupName = "";
+                            var azLocation = "";
+
+                            try
+                            {
+                                var azInfo = azLookupResponse.AvailabilityZones.SingleOrDefault(s => s.ZoneId == server.Placement.AvailabilityZoneId);
+                                azLongName = azInfo.GroupLongName;
+                                azGroupName = azInfo.GroupName;
+                                azLocation = string.Join(",", azInfo.Geography.Select(s=> s.Name));
+                            }
+                            catch (Exception e)
+                            {
+                                Console.WriteLine($"Error getting az info details {e}");
+                            }
+
                             servers.Add(new ServerDetails
                             {
                                 Name = server.Tags.FirstOrDefault(k => k.Key.Equals("name", StringComparison.InvariantCultureIgnoreCase))?.Value,
@@ -323,6 +348,10 @@ namespace awesome.configurationmanagementdatabase
                                 PlatformType = platformType,
                                 PlatformLookupMethod = platformLookupMethod,
                                 AvailabilityZone = server.Placement.AvailabilityZone,
+                                AvailabilityZoneId = server.Placement.AvailabilityZoneId,
+                                AvailabilityZoneLongName = azLongName,
+                                AvailabilityZoneGroupName = azGroupName,
+                                AvailabilityZoneLocation = azLocation,
                                 DataCentreType = account.DataCentreType,
                                 StoppedFor30Days = stoppedFor30Days,
                                 StoppedFor90Days = stoppedFor90Days,

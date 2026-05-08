@@ -29,6 +29,10 @@ namespace awesome.configurationmanagementdatabase
         public List<IpV4Network> Ipv4Networks { get; set; } = new List<IpV4Network>();
         public List<VolumeDetail> Volumes { get; set; } = new List<VolumeDetail>();
         public string AvailabilityZone { get; set; }
+        public string AvailabilityZoneId { get; set; }
+        public string AvailabilityZoneLongName { get; set; }
+        public string AvailabilityZoneGroupName { get; set; }
+        public string AvailabilityZoneLocation { get; set; }
 
         // Set by core code, not returned from GetServers
         public string PageName { get; set; }
