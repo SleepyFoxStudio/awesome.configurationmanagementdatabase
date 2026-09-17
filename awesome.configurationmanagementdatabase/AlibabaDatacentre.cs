@@ -117,7 +117,8 @@ namespace awesome.configurationmanagementdatabase
                 DataCentreType = "Alibaba",
                 ServerGroups = new List<ServerGroup>(),
                 Users = await GetUsersAsync(accountId).ConfigureAwait(false),
-                Databases = await GetDatabasesAsync().ConfigureAwait(false)
+                Databases = await GetDatabasesAsync().ConfigureAwait(false),
+                Partition = "Alibaba",
             });
 
             var clientForEachRegion = await _lazyClientsForAllRegions.Value.ConfigureAwait(false);

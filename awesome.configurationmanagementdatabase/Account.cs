@@ -8,6 +8,7 @@ namespace awesome.configurationmanagementdatabase
     public class Account
     {
         public string DataCentreType { get; set; }
+        public string Partition { get; set; } = "aws";
         public Dictionary<string, string> Tags { get; set; } = new Dictionary<string, string>();
         public string AccountName { get; set; }
         public string AccountId { get; set; }

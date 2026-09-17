@@ -89,6 +89,7 @@ namespace awesome.configurationmanagementdatabase
                 "cn-north-1"
             };
             string apiRegion = null;
+            var partition = "aws";
             foreach (var checkingRegion in regionsToCheckCreds)
             {
                 try
@@ -97,6 +98,10 @@ namespace awesome.configurationmanagementdatabase
                     var getCallerIdentityResponseRegionCheck = await stsClientRegionCheck.GetCallerIdentityAsync(new GetCallerIdentityRequest());
                     apiRegion = checkingRegion;
                     Console.WriteLine($"Passed Checking creds in {checkingRegion}");
+                    if (checkingRegion.StartsWith("cn-"))
+                    {
+                        partition = "aws-cn";
+                    }
                     break;
                 }
                 catch (Exception exception)
@@ -113,7 +118,6 @@ namespace awesome.configurationmanagementdatabase
             var baseRegion = RegionEndpoint.GetBySystemName(apiRegion);
             var client = new AmazonEC2Client(_awsCreds, baseRegion);
             var orgClient = new AmazonOrganizationsClient(_awsOrgCreds, baseRegion);
-            var account = new Account();
 
             var regionRequest = new DescribeRegionsRequest();
             var regionsResponse = await client.DescribeRegionsAsync(regionRequest, CancellationToken.None);
@@ -142,7 +146,7 @@ namespace awesome.configurationmanagementdatabase
             {
                 accountName = accountName + "-" + getCallerIdentityResponse.Account;
             }
-            account = (new Account
+            var account = (new Account
             {
                 AccountName = accountName,
                 AccountId = getCallerIdentityResponse.Account,
@@ -157,6 +161,7 @@ namespace awesome.configurationmanagementdatabase
                 DynamoDatabases = await GetDynamoDatabasesAsync(regionsResponse.Regions, getCallerIdentityResponse.Account).ConfigureAwait(false),
                 Tags = await GetTagsForAccount(getCallerIdentityResponse.Account, orgClient),
                 Volumes = await GetCloudVolumes(regionsResponse.Regions, getCallerIdentityResponse.Account),
+                Partition = partition
             });
 
             foreach (var region in regionsResponse.Regions)
